@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@postpilot/db";
 import { computeNextRunAt, RecurrenceType } from "@postpilot/shared";
-import { AuthedRequest, requireAuth } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 
 export const schedulesRouter = Router();
 schedulesRouter.use(requireAuth);
@@ -27,16 +27,16 @@ const createScheduleSchema = z.object({
   endAt: z.string().datetime().optional(),
 });
 
-schedulesRouter.post("/", async (req: AuthedRequest, res) => {
+schedulesRouter.post("/", async (req, res) => {
   const parsed = createScheduleSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const data = parsed.data;
 
-  const post = await prisma.post.findFirst({ where: { id: data.postId, userId: req.userId } });
+  const post = await prisma.post.findUnique({ where: { id: data.postId } });
   if (!post) return res.status(404).json({ error: "Post not found" });
 
   const accounts = await prisma.socialAccount.findMany({
-    where: { id: { in: data.socialAccountIds }, userId: req.userId },
+    where: { id: { in: data.socialAccountIds } },
   });
   if (accounts.length !== data.socialAccountIds.length) {
     return res.status(404).json({ error: "One or more social accounts not found" });
@@ -66,9 +66,8 @@ schedulesRouter.post("/", async (req: AuthedRequest, res) => {
   res.status(201).json({ schedule });
 });
 
-schedulesRouter.get("/", async (req: AuthedRequest, res) => {
+schedulesRouter.get("/", async (_req, res) => {
   const schedules = await prisma.schedule.findMany({
-    where: { post: { userId: req.userId } },
     include: {
       post: { include: { media: true } },
       targets: { include: { socialAccount: true } },
@@ -78,9 +77,9 @@ schedulesRouter.get("/", async (req: AuthedRequest, res) => {
   res.json({ schedules });
 });
 
-schedulesRouter.get("/:id", async (req: AuthedRequest, res) => {
-  const schedule = await prisma.schedule.findFirst({
-    where: { id: req.params.id, post: { userId: req.userId } },
+schedulesRouter.get("/:id", async (req, res) => {
+  const schedule = await prisma.schedule.findUnique({
+    where: { id: req.params.id },
     include: {
       post: { include: { media: true } },
       targets: { include: { socialAccount: true } },
@@ -101,19 +100,17 @@ const updateScheduleSchema = z.object({
   socialAccountIds: z.array(z.string().uuid()).min(1).optional(),
 });
 
-schedulesRouter.put("/:id", async (req: AuthedRequest, res) => {
+schedulesRouter.put("/:id", async (req, res) => {
   const parsed = updateScheduleSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const data = parsed.data;
 
-  const existing = await prisma.schedule.findFirst({
-    where: { id: req.params.id, post: { userId: req.userId } },
-  });
+  const existing = await prisma.schedule.findUnique({ where: { id: req.params.id } });
   if (!existing) return res.status(404).json({ error: "Schedule not found" });
 
   if (data.socialAccountIds) {
     const accounts = await prisma.socialAccount.findMany({
-      where: { id: { in: data.socialAccountIds }, userId: req.userId },
+      where: { id: { in: data.socialAccountIds } },
     });
     if (accounts.length !== data.socialAccountIds.length) {
       return res.status(404).json({ error: "One or more social accounts not found" });
@@ -147,10 +144,8 @@ schedulesRouter.put("/:id", async (req: AuthedRequest, res) => {
   res.json({ schedule });
 });
 
-schedulesRouter.patch("/:id/pause", async (req: AuthedRequest, res) => {
-  const existing = await prisma.schedule.findFirst({
-    where: { id: req.params.id, post: { userId: req.userId } },
-  });
+schedulesRouter.patch("/:id/pause", async (req, res) => {
+  const existing = await prisma.schedule.findUnique({ where: { id: req.params.id } });
   if (!existing) return res.status(404).json({ error: "Schedule not found" });
 
   const schedule = await prisma.schedule.update({
@@ -160,10 +155,8 @@ schedulesRouter.patch("/:id/pause", async (req: AuthedRequest, res) => {
   res.json({ schedule });
 });
 
-schedulesRouter.patch("/:id/resume", async (req: AuthedRequest, res) => {
-  const existing = await prisma.schedule.findFirst({
-    where: { id: req.params.id, post: { userId: req.userId } },
-  });
+schedulesRouter.patch("/:id/resume", async (req, res) => {
+  const existing = await prisma.schedule.findUnique({ where: { id: req.params.id } });
   if (!existing) return res.status(404).json({ error: "Schedule not found" });
 
   let nextRunAt = existing.nextRunAt ?? existing.startAt;
@@ -190,10 +183,8 @@ schedulesRouter.patch("/:id/resume", async (req: AuthedRequest, res) => {
   res.json({ schedule });
 });
 
-schedulesRouter.delete("/:id", async (req: AuthedRequest, res) => {
-  const existing = await prisma.schedule.findFirst({
-    where: { id: req.params.id, post: { userId: req.userId } },
-  });
+schedulesRouter.delete("/:id", async (req, res) => {
+  const existing = await prisma.schedule.findUnique({ where: { id: req.params.id } });
   if (!existing) return res.status(404).json({ error: "Schedule not found" });
 
   await prisma.schedule.delete({ where: { id: existing.id } });

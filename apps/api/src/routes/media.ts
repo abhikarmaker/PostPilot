@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@postpilot/db";
-import { AuthedRequest, requireAuth } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 import { createUploadUrl } from "../lib/storage";
 
 export const mediaRouter = Router();
@@ -13,12 +13,11 @@ const uploadUrlSchema = z.object({
 });
 
 /** Step 1: client asks for a presigned URL to upload the raw file to storage. */
-mediaRouter.post("/upload-url", async (req: AuthedRequest, res) => {
+mediaRouter.post("/upload-url", async (req, res) => {
   const parsed = uploadUrlSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   const { key, uploadUrl, publicUrl } = await createUploadUrl(
-    req.userId!,
     parsed.data.fileExtension,
     parsed.data.contentType
   );
@@ -38,20 +37,15 @@ const createMediaSchema = z.object({
 });
 
 /** Step 2: client confirms the upload finished, creating the Media record. */
-mediaRouter.post("/", async (req: AuthedRequest, res) => {
+mediaRouter.post("/", async (req, res) => {
   const parsed = createMediaSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
-  const media = await prisma.media.create({
-    data: { ...parsed.data, userId: req.userId! },
-  });
+  const media = await prisma.media.create({ data: parsed.data });
   res.status(201).json({ media });
 });
 
-mediaRouter.get("/", async (req: AuthedRequest, res) => {
-  const media = await prisma.media.findMany({
-    where: { userId: req.userId },
-    orderBy: { createdAt: "desc" },
-  });
+mediaRouter.get("/", async (_req, res) => {
+  const media = await prisma.media.findMany({ orderBy: { createdAt: "desc" } });
   res.json({ media });
 });

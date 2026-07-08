@@ -41,24 +41,8 @@ enum PublishStatus {
   FAILED
 }
 
-model User {
-  id             String          @id @default(uuid())
-  email          String          @unique
-  passwordHash   String
-  name           String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  socialAccounts SocialAccount[]
-  media          Media[]
-  posts          Post[]
-
-  @@map("users")
-}
-
 model SocialAccount {
   id              String   @id @default(uuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   platform        Platform
   externalId      String
   name            String
@@ -71,14 +55,12 @@ model SocialAccount {
   scheduleTargets ScheduleTarget[]
   publishHistory  PublishHistory[]
 
-  @@unique([userId, platform, externalId])
+  @@unique([platform, externalId])
   @@map("social_accounts")
 }
 
 model Media {
   id              String    @id @default(uuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   type            MediaType
   url             String
   storageKey      String
@@ -96,8 +78,6 @@ model Media {
 
 model Post {
   id        String     @id @default(uuid())
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   mediaId   String
   media     Media      @relation(fields: [mediaId], references: [id])
   caption   String

@@ -1,13 +1,12 @@
 import { Router } from "express";
 import { prisma } from "@postpilot/db";
-import { AuthedRequest, requireAuth } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 
 export const publishHistoryRouter = Router();
 publishHistoryRouter.use(requireAuth);
 
-publishHistoryRouter.get("/", async (req: AuthedRequest, res) => {
+publishHistoryRouter.get("/", async (_req, res) => {
   const history = await prisma.publishHistory.findMany({
-    where: { schedule: { post: { userId: req.userId } } },
     include: {
       socialAccount: { select: { platform: true, name: true } },
       schedule: { include: { post: { select: { caption: true } } } },

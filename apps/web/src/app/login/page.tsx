@@ -1,14 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,7 +18,7 @@ export default function LoginPage() {
     try {
       const result = await apiFetch<{ token: string }>("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ password }),
       });
       setToken(result.token);
       router.push("/dashboard");
@@ -33,18 +31,15 @@ export default function LoginPage() {
 
   return (
     <div className="container" style={{ maxWidth: 400, paddingTop: 80 }}>
-      <h1>Log in to PostPilot</h1>
+      <h1>PostPilot</h1>
       <form onSubmit={handleSubmit} className="card">
-        <div className="field">
-          <label htmlFor="email">Email</label>
-          <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
         <div className="field">
           <label htmlFor="password">Password</label>
           <input
             id="password"
             type="password"
             required
+            autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -54,9 +49,6 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
-      <p>
-        No account yet? <Link href="/register">Register</Link>
-      </p>
     </div>
   );
 }

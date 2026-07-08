@@ -18,8 +18,8 @@ const s3 = new S3Client({
  * the bucket (or STORAGE_PUBLIC_BASE_URL, e.g. a CDN in front of it) must
  * serve objects publicly.
  */
-export async function createUploadUrl(userId: string, fileExtension: string, contentType: string) {
-  const key = `${userId}/${randomUUID()}${fileExtension}`;
+export async function createUploadUrl(fileExtension: string, contentType: string) {
+  const key = `${randomUUID()}${fileExtension}`;
 
   const uploadUrl = await getSignedUrl(
     s3,

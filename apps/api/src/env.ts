@@ -6,6 +6,7 @@ const envSchema = z.object({
   WEB_BASE_URL: z.string().default("http://localhost:3000"),
   DATABASE_URL: z.string(),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
+  ADMIN_PASSWORD: z.string().min(1, "ADMIN_PASSWORD is required"),
   META_APP_ID: z.string().default(""),
   META_APP_SECRET: z.string().default(""),
   META_REDIRECT_URI: z.string().default("http://localhost:4000/auth/meta/callback"),
