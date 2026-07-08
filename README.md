@@ -56,30 +56,85 @@ because you're only ever publishing to your own Page/Instagram account:
 If you ever want to publish to a Page you don't personally administer, that's
 when Advanced Access and App Review come into play — not needed for this.
 
-## Deploying on an always-on server (recommended)
+## Deploying for $0/month
 
-Since the scheduler needs to keep running to fire posts on time, deploy this
-to a small VPS (or a home server) with Docker rather than running it only
-when your laptop happens to be open.
+Everything below is free-tier-forever, not a trial: an Oracle Cloud "Always
+Free" VM for compute, Postgres/Redis/Caddy running as containers on that same
+VM (no separate paid database), Cloudflare R2's free tier for media storage,
+DuckDNS for free subdomains, and Caddy for free automatic HTTPS. The only
+ongoing cost is the Meta Graph API itself, which is free.
+
+### 1. Create the free VM
+
+1. Sign up at [cloud.oracle.com](https://www.oracle.com/cloud/free/) (a card
+   is required for identity verification but you won't be charged if you
+   stay within the Always Free limits).
+2. Create a Compute Instance using an **Ampere A1 (ARM) "Always Free"**
+   shape — the free tier gives you up to 4 OCPUs / 24GB RAM, far more than
+   this stack needs. Use the default Ubuntu image.
+3. Assign it a **reserved (static) public IP** so it doesn't change on
+   reboot (Networking → Reserved Public IPs — free, still within Always
+   Free).
+4. Open ports **80** and **443** to the internet: add ingress rules for both
+   in the instance's **Security List / Network Security Group**, and also
+   confirm the VM's own firewall allows them (Oracle's Ubuntu images ship
+   with `iptables` rules that block everything but SSH by default — run
+   `sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT` and the same for
+   `443`, then persist with `sudo netfilter-persistent save` if available).
+5. SSH in and install Docker:
+   ```bash
+   curl -fsSL https://get.docker.com | sudo sh
+   sudo usermod -aG docker $USER   # log out and back in after this
+   sudo apt-get install -y docker-compose-plugin
+   ```
+
+### 2. Point two free DuckDNS subdomains at it
+
+1. Sign in at [duckdns.org](https://www.duckdns.org) (free account, no card).
+2. Register two subdomains, e.g. `yourname-app` and `yourname-api`, both
+   pointed at your VM's reserved public IP.
+3. These become `WEB_DOMAIN` and `API_DOMAIN` in your `.env` — Caddy will
+   request free Let's Encrypt certificates for them automatically the first
+   time it starts, as long as DNS is already pointing at the VM and ports
+   80/443 are reachable.
+
+### 3. Create a free Cloudflare R2 bucket
+
+1. Sign up at [dash.cloudflare.com](https://dash.cloudflare.com) and open
+   **R2** (free tier: 10GB storage, no egress fees — plenty for personal
+   Reels/photos).
+2. Create a bucket (e.g. `postpilot-media`) and enable public access for it
+   under the bucket's Settings → **Public access** (gives you a
+   `pub-xxxxxxxx.r2.dev` URL — that's `STORAGE_PUBLIC_BASE_URL`).
+3. Under **R2 → Manage API Tokens**, create a token with read/write access
+   to the bucket — that gives you `STORAGE_ACCESS_KEY_ID` and
+   `STORAGE_SECRET_ACCESS_KEY`.
+4. Your account ID (visible on the R2 overview page) forms
+   `STORAGE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com`.
+
+### 4. Configure your Meta app and deploy
+
+Follow "Setting up your Meta App" above, using
+`https://<API_DOMAIN>/auth/meta/callback` as the OAuth redirect URI. Then:
 
 ```bash
 git clone <this repo> postpilot && cd postpilot
 cp .env.example .env
-# Edit .env: set ADMIN_PASSWORD, JWT_SECRET, META_APP_ID/SECRET, storage
-# creds, and WEB_BASE_URL/NEXT_PUBLIC_API_BASE_URL to your server's
-# public address (e.g. http://your-server-ip:3000 / :4000, or a domain).
+# Fill in: WEB_DOMAIN, API_DOMAIN, ADMIN_PASSWORD, JWT_SECRET,
+# META_APP_ID/SECRET, and the STORAGE_* values from step 3.
 
 docker compose up -d --build
 ```
 
-This brings up Postgres, Redis, the API, the worker, and the web dashboard.
-The API and worker automatically apply database migrations on startup, so
-there's nothing else to run. Open `http://<your-server>:3000`, log in with
-`ADMIN_PASSWORD`, and connect your Facebook Page under **Connected Accounts**.
+This brings up Postgres, Redis, the API, the worker, the web dashboard, and
+Caddy (which is the only container exposed to the internet, on 80/443).
+Migrations apply automatically on startup. Visit `https://<WEB_DOMAIN>`, log
+in with `ADMIN_PASSWORD`, and connect your Facebook Page under **Connected
+Accounts**.
 
-Media you upload must end up at a **publicly reachable URL** — Meta fetches
-it from there — so `STORAGE_*` should point at a real S3 bucket or
-Cloudflare R2 bucket (with public read access), not local disk.
+The first request to each domain may take a few seconds while Caddy
+provisions its certificate — check `docker compose logs caddy` if a page
+doesn't load right away.
 
 ## Local development (without Docker)
 
