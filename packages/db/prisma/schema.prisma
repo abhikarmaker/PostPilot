@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  REEL
+}
+
+enum RecurrenceType {
+  ONE_TIME
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum ScheduleStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum PublishStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  passwordHash   String
+  name           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  socialAccounts SocialAccount[]
+  media          Media[]
+  posts          Post[]
+
+  @@map("users")
+}
+
+model SocialAccount {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform        Platform
+  externalId      String
+  name            String
+  accessToken     String
+  tokenExpiresAt  DateTime?
+  metaUserId      String?
+  connectedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  scheduleTargets ScheduleTarget[]
+  publishHistory  PublishHistory[]
+
+  @@unique([userId, platform, externalId])
+  @@map("social_accounts")
+}
+
+model Media {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            MediaType
+  url             String
+  storageKey      String
+  mimeType        String?
+  sizeBytes       Int?
+  width           Int?
+  height          Int?
+  durationSeconds Int?
+  createdAt       DateTime  @default(now())
+
+  posts           Post[]
+
+  @@map("media")
+}
+
+model Post {
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media      @relation(fields: [mediaId], references: [id])
+  caption   String
+  hashtags  String[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  schedules Schedule[]
+
+  @@map("posts")
+}
+
+model Schedule {
+  id             String          @id @default(uuid())
+  postId         String
+  post           Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  recurrenceType RecurrenceType
+  interval       Int             @default(1)
+  cronExpression String?
+  daysOfWeek     Int[]
+  timezone       String          @default("UTC")
+  startAt        DateTime
+  endAt          DateTime?
+  nextRunAt      DateTime?
+  status         ScheduleStatus  @default(ACTIVE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  targets        ScheduleTarget[]
+  history        PublishHistory[]
+
+  @@index([status, nextRunAt])
+  @@map("schedules")
+}
+
+model ScheduleTarget {
+  id              String        @id @default(uuid())
+  scheduleId      String
+  schedule        Schedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  socialAccountId String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, socialAccountId])
+  @@map("schedule_targets")
+}
+
+model PublishHistory {
+  id              String        @id @default(uuid())
+  scheduleId      String
+  schedule        Schedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  socialAccountId String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  platform        Platform
+  status          PublishStatus @default(PENDING)
+  externalPostId  String?
+  errorMessage    String?
+  runAt           DateTime
+  attemptedAt     DateTime      @default(now())
+
+  @@index([scheduleId])
+  @@map("publish_history")
+}

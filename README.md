@@ -1,142 +1,79 @@
 # PostPilot
 
-Project: Social Media Recurring Post Scheduler (Meta Graph API)
+Recurring social media post scheduler for Facebook Pages and Instagram Professional
+accounts, built on the Meta Graph API. Upload a post once, set a recurrence, and
+PostPilot republishes it as a brand-new Facebook/Instagram post on schedule.
 
-Goal
+See [`docs/PROJECT_BRIEF.md`](docs/PROJECT_BRIEF.md) for the full product spec and
+long-term vision.
 
-Build a feature that allows businesses to upload a Facebook or Instagram post/Reel once and automatically republish the same content on a recurring schedule (e.g., weekly, monthly).
+## Architecture
 
-Platforms
+This is an npm-workspaces monorepo:
 
-* Facebook Pages
-* Instagram Professional (Business/Creator) accounts
-* Future expansion: LinkedIn, X, YouTube, TikTok (where APIs permit)
+```
+apps/
+  web/     Next.js frontend — connect accounts, compose posts, manage schedules
+  api/     Express REST API — auth, social accounts, media, posts, schedules, history
+  worker/  BullMQ scheduler — polls due schedules and publishes via the Meta Graph API
+packages/
+  db/      Prisma schema + client shared by api and worker
+  shared/  Recurrence engine, Meta Graph API client, shared types
+```
 
-APIs
+**Scheduler flow**: the worker polls every minute (`POLL_CRON`) for schedules whose
+`nextRunAt` has passed, immediately advances each schedule's `nextRunAt` (so a second
+poll tick can't double-publish it), then enqueues one `publish` job per target social
+account. Each publish job calls the Meta Graph API, retries on failure (BullMQ,
+exponential backoff, 3 attempts), and records a `PublishHistory` row with the outcome.
 
-* Meta Graph API
-* Facebook Pages API
-* Instagram Graph API
+## Prerequisites
 
-Requirements
+- Node.js 20+
+- Docker (for local Postgres + Redis), or your own instances
+- A [Meta Developer App](https://developers.facebook.com/apps) with Facebook Login
+  and the Pages/Instagram Graph API products added, plus a Facebook Page with a
+  linked Instagram Professional account for testing
 
-* Meta Developer App
-* Facebook Page
-* Instagram Professional Account linked to the Facebook Page
-* Page Access Token (preferably long-lived)
-* Required Graph API permissions for publishing
+## Setup
 
-Core Features
+```bash
+npm install
 
-* Connect Facebook and Instagram accounts
-* Upload image/video/Reel
-* Store caption and hashtags
-* Select platforms (Facebook, Instagram, or both)
-* Schedule:
-    * One-time
-    * Daily
-    * Weekly
-    * Bi-weekly
-    * Monthly
-    * Custom recurrence
-* Pause / Resume schedules
-* Edit scheduled content
-* Delete schedules
-* Posting history and logs
+# Start Postgres + Redis
+docker compose up -d
 
-System Architecture
+# Configure env vars (fill in DATABASE_URL, JWT_SECRET, META_APP_ID/SECRET, storage creds)
+cp packages/db/.env.example packages/db/.env
+cp apps/api/.env.example apps/api/.env
+cp apps/worker/.env.example apps/worker/.env
+cp apps/web/.env.example apps/web/.env.local
 
-Frontend
+# Create the database schema
+npm run db:migrate
+```
 
-* Upload media
-* Compose caption
-* Configure schedule
-* Manage connected accounts
+## Running
 
-Backend
+```bash
+npm run dev:api     # http://localhost:4000
+npm run dev:worker  # polls for due schedules and publishes
+npm run dev:web     # http://localhost:3000
+```
 
-* Authentication
-* Store media metadata
-* Store schedule configuration
-* Scheduler service
-* Graph API integration
-* Retry and error handling
+## Meta Graph API notes
 
-Database Tables
+- The Graph API publishes **new** posts — it cannot repost an existing post by ID.
+  Each scheduled run creates a fresh Facebook/Instagram post from the stored media,
+  caption, and hashtags.
+- Instagram publishing requires a two-step container flow (create container, poll
+  until processed, then publish) — see `packages/shared/src/metaGraphClient.ts`.
+- Media must be reachable at a public URL for Meta to fetch it, so object storage
+  (S3/R2) must serve uploaded files publicly, or sit behind a public CDN.
+- The Graph API itself is free; only ad campaigns incur Meta charges.
 
-* Users
-* Social Accounts
-* Posts
-* Media
-* Schedules
-* Publish History
+## Database tables
 
-Scheduler Flow
-
-1. User uploads content.
-2. Save media, caption, hashtags, and recurrence rule.
-3. Scheduler runs periodically.
-4. Find posts due for publishing.
-5. Call the Meta Graph API.
-6. Record success or failure.
-7. Calculate and save the next run time.
-
-Notes
-
-* The Meta Graph API publishes new posts; it does not “repost” an existing Facebook post by ID.
-* Each scheduled run creates a new Facebook or Instagram post using the stored content.
-* The Graph API is free to use.
-* Only advertising campaigns incur Meta charges.
-
-Future Enhancements
-
-* AI-generated captions
-* AI hashtag suggestions
-* Auto image resizing
-* Content approval workflow
-* Multi-client support
-* Team permissions
-* Analytics dashboard
-* Cross-platform publishing
-* Bulk scheduling
-* Time zone support
-* Webhooks and notifications
-
-Suggested Technology Stack
-
-Frontend
-
-* React / Next.js
-
-Backend
-
-* Node.js + Express or NestJS
-
-Database
-
-* PostgreSQL
-
-Queue / Scheduler
-
-* BullMQ + Redis
-    or
-* Cron jobs / Cloud Scheduler
-
-Storage
-
-* AWS S3 or Cloudflare R2
-
-Authentication
-
-* Meta OAuth
-
-Deployment
-
-* Docker
-* AWS / Azure / Google Cloud / DigitalOcean
-
-Long-Term Vision
-
-Develop a unified social media automation platform where businesses can connect multiple social networks, upload content once, schedule recurring posts, and manage publishing from a single dashboard.
-
-This summary should be enough to pick the project back up later. When you’re ready, I can help you design the database, API endpoints, scheduler, and Meta integration step by step.
+`users`, `social_accounts`, `media`, `posts`, `schedules`, `schedule_targets`
+(join table for multi-platform schedules), `publish_history`. See
+`packages/db/prisma/schema.prisma` for the full schema.

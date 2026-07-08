@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postpilot
+      POSTGRES_PASSWORD: postpilot
+      POSTGRES_DB: postpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postpilot-postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - postpilot-redis-data:/data
+
+volumes:
+  postpilot-postgres-data:
+  postpilot-redis-data:
