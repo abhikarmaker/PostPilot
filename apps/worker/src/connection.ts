@@ -11,5 +11,5 @@ export const connection: ConnectionOptions = {
   maxRetriesPerRequest: null,
 };
 
-export const POLL_QUEUE_NAME = "postpilot:poll-due-schedules";
-export const PUBLISH_QUEUE_NAME = "postpilot:publish-post";
+export const POLL_QUEUE_NAME = "postpilot-poll-due-schedules";
+export const PUBLISH_QUEUE_NAME = "postpilot-publish-post";
