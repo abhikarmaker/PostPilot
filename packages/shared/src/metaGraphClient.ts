@@ -80,7 +80,7 @@ export class MetaGraphClient {
   /** Exchanges a short-lived user token for a long-lived one (~60 days). */
   async getLongLivedUserToken(
     shortLivedToken: string
-  ): Promise<{ access_token: string; token_type: string; expires_in: number }> {
+  ): Promise<{ access_token: string; token_type: string; expires_in?: number }> {
     return graphFetch("/oauth/access_token", {
       grant_type: "fb_exchange_token",
       client_id: this.config.appId,

@@ -57,7 +57,13 @@ metaAuthRouter.get("/callback", async (req, res) => {
     const longLived = await metaClient.getLongLivedUserToken(shortLived.access_token);
     const pages = await metaClient.getManagedPages(longLived.access_token);
 
-    const tokenExpiresAt = new Date(Date.now() + longLived.expires_in * 1000);
+    // Meta's fb_exchange_token grant normally returns expires_in (~60 days),
+    // but sometimes omits it -- fall back to the documented long-lived
+    // duration rather than producing an invalid Date.
+    const META_LONG_LIVED_TOKEN_SECONDS = 60 * 24 * 60 * 60;
+    const tokenExpiresAt = new Date(
+      Date.now() + (longLived.expires_in ?? META_LONG_LIVED_TOKEN_SECONDS) * 1000
+    );
 
     for (const page of pages) {
       await prisma.socialAccount.upsert({

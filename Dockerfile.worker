@@ -1,7 +1,7 @@
 # Personal single-user deployment: runs the TypeScript source directly via
 # tsx rather than a separate compile step, trading a larger image for a
 # much simpler build.
-FROM node:20-alpine
+FROM node:20-alpine3.19
 WORKDIR /app
 
 COPY package.json package-lock.json ./
