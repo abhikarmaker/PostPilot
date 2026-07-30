@@ -37,3 +37,29 @@ export async function createUploadUrl(fileExtension: string, contentType: string
 
   return { key, uploadUrl, publicUrl };
 }
+
+/**
+ * Uploads a buffer directly to object storage from the server, for flows
+ * where the file is already server-side (e.g. extracted from an uploaded
+ * zip) rather than being PUT by the browser via a presigned URL.
+ */
+export async function uploadBuffer(
+  key: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<{ key: string; publicUrl: string }> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: env.STORAGE_BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    })
+  );
+
+  const publicUrl = env.STORAGE_PUBLIC_BASE_URL
+    ? `${env.STORAGE_PUBLIC_BASE_URL.replace(/\/$/, "")}/${key}`
+    : `https://${env.STORAGE_BUCKET}.s3.amazonaws.com/${key}`;
+
+  return { key, publicUrl };
+}

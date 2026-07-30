@@ -8,6 +8,7 @@ import { mediaRouter } from "./routes/media";
 import { postsRouter } from "./routes/posts";
 import { schedulesRouter } from "./routes/schedules";
 import { publishHistoryRouter } from "./routes/publishHistory";
+import { campaignsRouter } from "./routes/campaigns";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/media", mediaRouter);
 app.use("/posts", postsRouter);
 app.use("/schedules", schedulesRouter);
 app.use("/publish-history", publishHistoryRouter);
+app.use("/campaigns", campaignsRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   // eslint-disable-next-line no-console

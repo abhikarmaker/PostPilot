@@ -1,5 +1,6 @@
 import { env } from "./env";
 import { Queue, Worker } from "bullmq";
+import { MetaGraphApiError } from "@postpilot/shared";
 import { connection, POLL_QUEUE_NAME, PUBLISH_QUEUE_NAME } from "./connection";
 import { processDueSchedules } from "./pollProcessor";
 import { markPublishJobFailed, processPublishJob } from "./publishProcessor";
@@ -40,11 +41,20 @@ const publishWorker = new Worker(
 
 publishWorker.on("failed", async (job, error) => {
   if (!job) return;
+
+  const fullDetails =
+    error instanceof MetaGraphApiError
+      ? JSON.stringify({ message: error.message, status: error.status, body: error.body })
+      : error.message;
+
+  // Log every attempt's full error, not just the terminal one, so transient
+  // failures are still visible in the container logs while they're retrying.
+  console.error(`Publish job ${job.id} attempt ${job.attemptsMade} failed:`, fullDetails);
+
   const attemptsExhausted = job.attemptsMade >= (job.opts.attempts ?? 1);
   if (attemptsExhausted) {
-    await markPublishJobFailed(job.data.publishHistoryId, error.message);
-    // eslint-disable-next-line no-console
-    console.error(`Publish job ${job.id} failed permanently:`, error.message);
+    await markPublishJobFailed(job.data.publishHistoryId, fullDetails);
+    console.error(`Publish job ${job.id} failed permanently.`);
   }
 });
 

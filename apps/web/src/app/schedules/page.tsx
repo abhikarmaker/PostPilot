@@ -14,7 +14,7 @@ interface Schedule {
   endAt: string | null;
   nextRunAt: string | null;
   status: "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELLED";
-  post: { caption: string; media: { url: string; type: string } };
+  post: { label: string | null; fbCaption: string; igCaption: string; media: { url: string; type: string } };
   targets: { socialAccount: { platform: string; name: string } }[];
 }
 
@@ -117,7 +117,9 @@ function SchedulesList() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
             <div>
               <p style={{ margin: 0 }}>
-                <strong>{schedule.post.caption || "(no caption)"}</strong>
+                <strong>
+                  {schedule.post.label || schedule.post.fbCaption || schedule.post.igCaption || "(no caption)"}
+                </strong>
               </p>
               <p style={{ margin: "4px 0", color: "var(--muted)", fontSize: 13 }}>
                 {schedule.targets.map((t) => `${t.socialAccount.platform}: ${t.socialAccount.name}`).join(", ")}

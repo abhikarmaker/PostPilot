@@ -19,22 +19,21 @@ export async function processPublishJob(job: Job<{ publishHistoryId: string }>) 
 
   const { post } = history.schedule;
   const { media } = post;
-  const caption = buildCaption(post.caption, post.hashtags);
+  const platform = history.socialAccount.platform;
+  const caption =
+    platform === "FACEBOOK"
+      ? buildCaption(post.fbCaption, post.fbHashtags)
+      : buildCaption(post.igCaption, post.igHashtags);
 
   const publishParams = { mediaUrl: media.url, mediaType: media.type, caption };
+  const { externalId, accessToken } = history.socialAccount;
 
   const result =
-    history.socialAccount.platform === "FACEBOOK"
-      ? await metaClient.publishFacebookPost(
-          history.socialAccount.externalId,
-          history.socialAccount.accessToken,
-          publishParams
-        )
-      : await metaClient.publishInstagramPost(
-          history.socialAccount.externalId,
-          history.socialAccount.accessToken,
-          publishParams
-        );
+    platform === "FACEBOOK"
+      ? media.type === "REEL"
+        ? await metaClient.publishFacebookReel(externalId, accessToken, publishParams)
+        : await metaClient.publishFacebookPost(externalId, accessToken, publishParams)
+      : await metaClient.publishInstagramPost(externalId, accessToken, publishParams);
 
   await prisma.publishHistory.update({
     where: { id: history.id },

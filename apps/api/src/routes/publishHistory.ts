@@ -9,7 +9,7 @@ publishHistoryRouter.get("/", async (_req, res) => {
   const history = await prisma.publishHistory.findMany({
     include: {
       socialAccount: { select: { platform: true, name: true } },
-      schedule: { include: { post: { select: { caption: true } } } },
+      schedule: { include: { post: { select: { label: true, fbCaption: true, igCaption: true } } } },
     },
     orderBy: { attemptedAt: "desc" },
     take: 100,

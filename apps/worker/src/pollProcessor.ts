@@ -54,7 +54,7 @@ export async function processDueSchedules(publishQueue: Queue) {
       await publishQueue.add(
         "publish",
         { publishHistoryId: history.id },
-        { attempts: 3, backoff: { type: "exponential", delay: 30_000 } }
+        { attempts: 2, backoff: { type: "fixed", delay: 600_000 } }
       );
     }
   }

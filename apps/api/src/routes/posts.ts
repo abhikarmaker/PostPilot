@@ -8,8 +8,11 @@ postsRouter.use(requireAuth);
 
 const postSchema = z.object({
   mediaId: z.string().uuid(),
-  caption: z.string().max(2200),
-  hashtags: z.array(z.string()).default([]),
+  label: z.string().max(200).optional(),
+  fbCaption: z.string().max(2200),
+  fbHashtags: z.array(z.string()).default([]),
+  igCaption: z.string().max(2200),
+  igHashtags: z.array(z.string()).default([]),
 });
 
 postsRouter.post("/", async (req, res) => {

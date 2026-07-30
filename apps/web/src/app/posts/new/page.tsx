@@ -23,8 +23,11 @@ function NewPostForm() {
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [mediaType, setMediaType] = useState<MediaType>("IMAGE");
-  const [caption, setCaption] = useState("");
-  const [hashtags, setHashtags] = useState("");
+  const [label, setLabel] = useState("");
+  const [fbCaption, setFbCaption] = useState("");
+  const [fbHashtags, setFbHashtags] = useState("");
+  const [igCaption, setIgCaption] = useState("");
+  const [igHashtags, setIgHashtags] = useState("");
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>("ONE_TIME");
   const [interval, setInterval] = useState(1);
@@ -93,8 +96,14 @@ function NewPostForm() {
         method: "POST",
         body: JSON.stringify({
           mediaId: media.id,
-          caption,
-          hashtags: hashtags
+          label: label || undefined,
+          fbCaption,
+          fbHashtags: fbHashtags
+            .split(",")
+            .map((h) => h.trim())
+            .filter(Boolean),
+          igCaption,
+          igHashtags: igHashtags
             .split(",")
             .map((h) => h.trim())
             .filter(Boolean),
@@ -155,16 +164,41 @@ function NewPostForm() {
             </div>
           )}
           <div className="field">
-            <label htmlFor="caption">Caption</label>
-            <textarea id="caption" value={caption} onChange={(e) => setCaption(e.target.value)} maxLength={2200} />
+            <label htmlFor="label">Label (optional, for your own reference)</label>
+            <input id="label" placeholder="Week 1: Intro" value={label} onChange={(e) => setLabel(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>Facebook caption</h3>
+          <div className="field">
+            <label htmlFor="fbCaption">Caption</label>
+            <textarea id="fbCaption" value={fbCaption} onChange={(e) => setFbCaption(e.target.value)} maxLength={2200} />
           </div>
           <div className="field">
-            <label htmlFor="hashtags">Hashtags (comma-separated)</label>
+            <label htmlFor="fbHashtags">Hashtags (comma-separated)</label>
             <input
-              id="hashtags"
+              id="fbHashtags"
               placeholder="marketing, smallbusiness"
-              value={hashtags}
-              onChange={(e) => setHashtags(e.target.value)}
+              value={fbHashtags}
+              onChange={(e) => setFbHashtags(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>Instagram caption</h3>
+          <div className="field">
+            <label htmlFor="igCaption">Caption</label>
+            <textarea id="igCaption" value={igCaption} onChange={(e) => setIgCaption(e.target.value)} maxLength={2200} />
+          </div>
+          <div className="field">
+            <label htmlFor="igHashtags">Hashtags (comma-separated)</label>
+            <input
+              id="igHashtags"
+              placeholder="marketing, smallbusiness"
+              value={igHashtags}
+              onChange={(e) => setIgHashtags(e.target.value)}
             />
           </div>
         </div>

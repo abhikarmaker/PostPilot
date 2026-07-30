@@ -19,6 +19,7 @@ export function NavBar() {
       </Link>
       <Link href="/connect">Connected Accounts</Link>
       <Link href="/posts/new">New Post</Link>
+      <Link href="/campaigns/import">Import Campaign</Link>
       <Link href="/schedules">Schedules</Link>
       <Link href="/history">History</Link>
       <button className="secondary" onClick={logout}>

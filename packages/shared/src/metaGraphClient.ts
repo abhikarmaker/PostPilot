@@ -102,7 +102,7 @@ export class MetaGraphClient {
     return result.data;
   }
 
-  /** Publishes a new photo or video post to a Facebook Page. Reels use the videos endpoint. */
+  /** Publishes a photo or a plain (non-Reel) video post to a Facebook Page. */
   async publishFacebookPost(
     pageId: string,
     pageAccessToken: string,
@@ -129,6 +129,57 @@ export class MetaGraphClient {
       },
       "POST"
     );
+  }
+
+  /**
+   * Publishes a Facebook Reel via Meta's resumable Video Reels API, using
+   * the hosted-file variant (Meta fetches `mediaUrl` itself) since our
+   * media is always already public -- no byte upload needed on our end.
+   *
+   * NOTE: this endpoint's exact field/response shape is implemented from
+   * documentation, not verified against a live Page in this environment.
+   * If Meta's actual response differs, this is the one function to patch.
+   */
+  async publishFacebookReel(
+    pageId: string,
+    pageAccessToken: string,
+    params: PublishParams
+  ): Promise<{ id: string }> {
+    const start = await graphFetch<{ video_id: string; upload_url: string }>(
+      `/${pageId}/video_reels`,
+      { upload_phase: "start", access_token: pageAccessToken },
+      "POST"
+    );
+
+    const uploadResponse = await fetch(start.upload_url, {
+      method: "POST",
+      headers: {
+        Authorization: `OAuth ${pageAccessToken}`,
+        file_url: params.mediaUrl,
+      },
+    });
+    const uploadJson = (await uploadResponse.json().catch(() => ({}))) as any;
+    if (!uploadResponse.ok || uploadJson?.success === false) {
+      throw new MetaGraphApiError(
+        uploadJson?.error?.message ?? `Facebook Reel upload failed (${uploadResponse.status})`,
+        uploadResponse.status,
+        uploadJson
+      );
+    }
+
+    await graphFetch(
+      `/${pageId}/video_reels`,
+      {
+        upload_phase: "finish",
+        video_id: start.video_id,
+        video_state: "PUBLISHED",
+        description: params.caption,
+        access_token: pageAccessToken,
+      },
+      "POST"
+    );
+
+    return { id: start.video_id };
   }
 
   /**

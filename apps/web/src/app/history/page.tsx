@@ -13,7 +13,7 @@ interface HistoryEntry {
   runAt: string;
   attemptedAt: string;
   socialAccount: { name: string };
-  schedule: { post: { caption: string } };
+  schedule: { post: { label: string | null; fbCaption: string; igCaption: string } };
 }
 
 function HistoryList() {
@@ -51,12 +51,33 @@ function HistoryList() {
                   <td>
                     {entry.platform}: {entry.socialAccount.name}
                   </td>
-                  <td>{entry.schedule.post.caption.slice(0, 60) || "(no caption)"}</td>
+                  <td>
+                    {(entry.schedule.post.label ||
+                      (entry.platform === "FACEBOOK"
+                        ? entry.schedule.post.fbCaption
+                        : entry.schedule.post.igCaption)
+                    ).slice(0, 60) || "(no caption)"}
+                  </td>
                   <td>
                     <span className={`badge ${entry.status.toLowerCase()}`}>{entry.status}</span>
                   </td>
                   <td style={{ color: entry.status === "FAILED" ? "var(--danger)" : "var(--muted)" }}>
-                    {entry.status === "FAILED" ? entry.errorMessage : entry.externalPostId}
+                    {entry.status === "FAILED" ? (
+                      <pre
+                        style={{
+                          margin: 0,
+                          maxWidth: 360,
+                          maxHeight: 120,
+                          overflow: "auto",
+                          whiteSpace: "pre-wrap",
+                          fontSize: 12,
+                        }}
+                      >
+                        {entry.errorMessage}
+                      </pre>
+                    ) : (
+                      entry.externalPostId
+                    )}
                   </td>
                 </tr>
               ))}

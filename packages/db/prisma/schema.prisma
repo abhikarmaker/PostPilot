@@ -77,15 +77,18 @@ model Media {
 }
 
 model Post {
-  id        String     @id @default(uuid())
-  mediaId   String
-  media     Media      @relation(fields: [mediaId], references: [id])
-  caption   String
-  hashtags  String[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id         String     @id @default(uuid())
+  mediaId    String
+  media      Media      @relation(fields: [mediaId], references: [id])
+  label      String?
+  fbCaption  String
+  fbHashtags String[]   @default([])
+  igCaption  String
+  igHashtags String[]   @default([])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
-  schedules Schedule[]
+  schedules  Schedule[]
 
   @@map("posts")
 }

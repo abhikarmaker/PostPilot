@@ -10,3 +10,6 @@ build/
 coverage/
 packages/db/generated/
 *.tsbuildinfo
+
+# Client campaign content -- not app code, keep out of version control
+*.zip

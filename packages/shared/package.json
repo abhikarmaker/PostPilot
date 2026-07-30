@@ -5,6 +5,10 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "cron-parser": "^4.9.0"
+    "cron-parser": "^4.9.0",
+    "luxon": "^3.5.0"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.4.2"
   }
 }
